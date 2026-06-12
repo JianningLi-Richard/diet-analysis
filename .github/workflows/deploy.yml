@@ -37,7 +37,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase repo owner
+        run: echo "OWNER_LC=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Push image to GHCR
         run: |
-          docker tag diet-analysis:latest ghcr.io/${{ github.repository_owner }}/diet-analysis:latest
-          docker push ghcr.io/${{ github.repository_owner }}/diet-analysis:latest
+          docker tag diet-analysis:latest ghcr.io/${{ env.OWNER_LC }}/diet-analysis:latest
+          docker push ghcr.io/${{ env.OWNER_LC }}/diet-analysis:latest
+
+
+          
