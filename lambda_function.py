@@ -10,25 +10,40 @@ CONTAINER_NAME = os.environ.get("BLOB_CONTAINER", "datasets")
 BLOB_NAME      = os.environ.get("BLOB_FILE", "All_Diets.csv")
 OUTPUT_DIR     = os.environ.get("OUTPUT_DIR", "simulated_nosql")
 
+# Pre-define dtypes to skip pandas type-inference on CSV load (cold-start improvement)
+DTYPE_MAP = {
+    "Diet_type": "category",
+    "Recipe_name": "string",
+    "Cuisine_type": "string",
+}
+
+# Cache blob client at module level, avoids reconnecting on every cold start
+_blob_service_client = None
+
+def get_blob_client():
+    global _blob_service_client
+    if _blob_service_client is None:
+        _blob_service_client = BlobServiceClient.from_connection_string(AZURITE_CONN_STR)
+    return _blob_service_client
+
 
 def process_nutritional_data():
     """Simulated Azure Function: อ่าน CSV จาก Blob Storage, คำนวณ, บันทึก JSON"""
 
-    
-    blob_service = BlobServiceClient.from_connection_string(AZURITE_CONN_STR)
+    # Use cached client instead of creating new connection every invocation
+    blob_service = get_blob_client()
     blob_client  = blob_service.get_blob_client(container=CONTAINER_NAME, blob=BLOB_NAME)
 
-    
     stream = blob_client.download_blob().readall()
-    df     = pd.read_csv(io.BytesIO(stream))
+
+    # dtype_map skips pandas type-inference pass — faster load on large CSVs
+    df     = pd.read_csv(io.BytesIO(stream), dtype=DTYPE_MAP)
     print(f"[INFO] Loaded {len(df)} rows from Blob Storage")
 
-    
     numeric_cols = ["Protein(g)", "Carbs(g)", "Fat(g)"]
     df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())
-    df["Diet_type"]  = df["Diet_type"].str.strip().str.title()
+    df["Diet_type"]  = df["Diet_type"].astype(str).str.strip().str.title()
 
-    
     avg_macros = (
         df.groupby("Diet_type")[numeric_cols]
           .mean()
@@ -37,7 +52,6 @@ def process_nutritional_data():
           .to_dict(orient="records")
     )
 
-    
     top_protein = (
         df.sort_values("Protein(g)", ascending=False)
           .groupby("Diet_type")
