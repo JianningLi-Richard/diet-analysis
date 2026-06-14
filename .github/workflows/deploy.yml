@@ -30,6 +30,12 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t diet-analysis:latest .
+    
+      - name: Build multistage image and compare sizes
+        run: |
+          docker build -t diet-analysis:multistage -f Dockerfile.multistage .
+          echo "=== IMAGE SIZE COMPARISON ==="
+          docker images | grep diet-analysis
 
       - name: Run container (simulated deployment)
         run: docker run --rm diet-analysis:latest
