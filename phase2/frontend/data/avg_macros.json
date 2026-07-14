@@ -1,0 +1,32 @@
+[
+  {
+    "Diet_type": "Dash",
+    "Protein(g)": 69.28,
+    "Carbs(g)": 160.54,
+    "Fat(g)": 101.15
+  },
+  {
+    "Diet_type": "Keto",
+    "Protein(g)": 101.27,
+    "Carbs(g)": 57.97,
+    "Fat(g)": 153.12
+  },
+  {
+    "Diet_type": "Mediterranean",
+    "Protein(g)": 101.11,
+    "Carbs(g)": 152.91,
+    "Fat(g)": 101.42
+  },
+  {
+    "Diet_type": "Paleo",
+    "Protein(g)": 88.67,
+    "Carbs(g)": 129.55,
+    "Fat(g)": 135.67
+  },
+  {
+    "Diet_type": "Vegan",
+    "Protein(g)": 56.16,
+    "Carbs(g)": 254.0,
+    "Fat(g)": 103.3
+  }
+]

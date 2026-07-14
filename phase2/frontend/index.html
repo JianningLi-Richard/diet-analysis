@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nutritional Insights Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <header class="bg-blue-600 text-white p-5 shadow">
+    <div class="container mx-auto">
+      <h1 class="text-3xl font-bold">Nutritional Insights Dashboard</h1>
+      <p class="text-sm mt-1">Phase 2 - Frontend Dashboard for Diet Analysis</p>
+    </div>
+  </header>
+
+  <main class="container mx-auto p-6">
+
+    <!-- Controls -->
+    <section class="bg-white rounded-lg shadow p-5 mb-6">
+      <h2 class="text-2xl font-semibold mb-4">Filters and Controls</h2>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Search by Diet Type"
+          class="p-2 border rounded w-full"
+        />
+
+        <select id="dietFilter" class="p-2 border rounded w-full">
+          <option value="all">All Diet Types</option>
+        </select>
+
+        <button
+          id="loadInsightsBtn"
+          class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
+        >
+          Get Nutritional Insights
+        </button>
+
+        <button
+          id="resetBtn"
+          class="bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700"
+        >
+          Reset Filters
+        </button>
+      </div>
+
+      <div class="mt-4 text-sm text-gray-600">
+        <span id="metaInfo">Execution metadata: local demo mode</span>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="mb-6">
+      <h2 class="text-2xl font-semibold mb-4">Data Visualizations</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <div class="bg-white p-4 shadow rounded-lg">
+          <h3 class="text-lg font-semibold mb-2">Bar Chart</h3>
+          <p class="text-sm text-gray-600 mb-4">Average protein, carbs, and fat by diet type.</p>
+          <canvas id="barChart"></canvas>
+        </div>
+
+        <div class="bg-white p-4 shadow rounded-lg">
+          <h3 class="text-lg font-semibold mb-2">Pie Chart</h3>
+          <p class="text-sm text-gray-600 mb-4">Recipe distribution by diet type.</p>
+          <canvas id="pieChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recipes Table -->
+    <section class="bg-white rounded-lg shadow p-5">
+      <h2 class="text-2xl font-semibold mb-4">Top Protein Recipes</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full border border-gray-200">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="border px-4 py-2 text-left">Diet Type</th>
+              <th class="border px-4 py-2 text-left">Recipe Name</th>
+              <th class="border px-4 py-2 text-left">Cuisine Type</th>
+              <th class="border px-4 py-2 text-left">Protein (g)</th>
+            </tr>
+          </thead>
+          <tbody id="recipeTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="flex justify-center items-center gap-3 mt-4">
+        <button id="prevBtn" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Previous</button>
+        <span id="pageInfo" class="text-sm font-medium text-gray-700">Page 1</span>
+        <button id="nextBtn" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Next</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-blue-600 text-white text-center p-4 mt-8">
+    <p>&copy; 2026 Nutritional Insights Dashboard</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
