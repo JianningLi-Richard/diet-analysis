@@ -1,24 +1,32 @@
 # Frontend Quick Start
 
-This folder contains the Phase 2 Role B dashboard frontend.
+This folder contains the Phase 2 dashboard frontend aligned with the teacher UI template.
 
-## Run locally
-Because the page loads JSON files with `fetch()`, open it through a local HTTP server instead of double-clicking the HTML file.
+## Features
+- Filters, search, buttons, and pagination
+- Bar chart, pie chart, scatter plot, and heatmap table
+- Metadata display with load/execution time
 
-### Option 1: Python
+## Run Locally
+Use a local HTTP server so `fetch()` can load JSON files.
+
 ```bash
 cd "/Users/Richard/Downloads/Cloud Computing/Project1/diet-analysis/phase2"
 python3 -m http.server 8000
 ```
 
-Then open:
-
+Open:
 - `http://localhost:8000/frontend/`
 
-## Data files used
-- `data/avg_macros.json`
-- `data/top_protein.json`
+## Data Files
+- `frontend/data/avg_macros.json`
+- `frontend/data/top_protein.json`
 
-## Future Azure integration
-Replace the JSON fetch URLs in `frontend/app.js` with Azure Function API endpoints when the backend is deployed.
+## Switch to Azure Function Endpoints
+Edit `frontend/app.js`:
+1. Set `CONFIG.useMockData = false`
+2. Set `CONFIG.azure.avg` to your Azure Function URL for avg macros
+3. Set `CONFIG.azure.topProtein` to your Azure Function URL for top protein data
+
+Then refresh the dashboard page.
 

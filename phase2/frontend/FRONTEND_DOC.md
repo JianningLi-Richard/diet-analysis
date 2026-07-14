@@ -1,75 +1,53 @@
-# Frontend Documentation – Phase 2 Role B
+# Frontend Documentation - Phase 2
 
 ## Overview
-This frontend dashboard was built for Phase 2 of the cloud dashboard project. The goal of the frontend is to present nutritional insights from the diets dataset in a clear, interactive, and browser-based dashboard.
+This frontend is built from the provided Phase 2 UI template and follows the teacher rubric: interactive dashboard controls, multiple visualizations, metadata display, and backend-ready integration points.
 
-## Role B Responsibilities Completed
-As Role B – Frontend Developer, the following tasks were completed:
-- built the dashboard user interface
-- added search and diet filter controls
-- added interactive buttons
-- added pagination for recipe browsing
-- implemented 2 charts: Bar Chart and Pie Chart
-- prepared this short frontend documentation
+## Implemented Files
+- `frontend/index.html`: UI template layout (charts, controls, API actions, pagination section)
+- `frontend/app.js`: data loading, filtering, charts, metadata, table, pagination
+- `frontend/data/avg_macros.json`: average macro data by diet type (Phase 1 output)
+- `frontend/data/top_protein.json`: top-protein recipe data (Phase 1 output)
 
-## Files
-- `frontend/index.html` – dashboard structure and layout
-- `frontend/app.js` – frontend logic and chart rendering
-- `frontend/FRONTEND_DOC.md` – short explanation of the frontend implementation
+## Dashboard UI (Template-Aligned)
+The page includes the same main sections from the teacher template:
+- Explore Nutritional Insights
+- Filters and Data Interaction
+- API Data Interaction
+- Top Protein Recipes table
+- Pagination
 
-## Features Implemented
+Implemented controls:
+- Search input (`Diet Type / Recipe / Cuisine`)
+- Diet type dropdown filter
+- Buttons: `Get Nutritional Insights`, `Get Recipes`, `Get Clusters`, `Reset Filters`
+- Previous/Next pagination controls
 
-### 1. Dashboard UI
-The dashboard includes:
-- a search box
-- a diet type dropdown filter
-- a "Get Nutritional Insights" button
-- a "Reset Filters" button
-- a recipe table with pagination
-- metadata text showing load status and execution time
+## Visualizations
+Implemented visualizations:
+1. **Bar Chart**: average `Protein(g)`, `Carbs(g)`, `Fat(g)` by diet type
+2. **Pie Chart**: recipe distribution by diet type
+3. **Scatter Plot**: `Protein(g)` vs `Carbs(g)` (bubble size from `Fat(g)`)
+4. **Heatmap table**: macro intensity by diet type (color-scaled cells)
 
-### 2. Charts
-Two charts were implemented using Chart.js.
+This satisfies the requirement of at least three visualizations.
 
-#### Bar Chart
-The bar chart shows the average values of:
-- Protein (g)
-- Carbs (g)
-- Fat (g)
+## Metadata and Interaction
+- Metadata line shows source mode (`LOCAL JSON` or `AZURE FUNCTION`) and execution/load time.
+- `Get Clusters` generates top cuisine clusters from recipe data.
+- Recipe table supports search + diet filter + pagination.
 
-for each diet type.
+## Backend Integration Strategy
+In `frontend/app.js`, data source selection is controlled by `CONFIG`:
+- `CONFIG.useMockData = true`: local JSON mode
+- `CONFIG.useMockData = false`: Azure Function mode
 
-This chart uses data from `data/avg_macros.json`.
+To connect to Azure Functions, set:
+- `CONFIG.azure.avg`
+- `CONFIG.azure.topProtein`
 
-#### Pie Chart
-The pie chart shows the distribution of top protein recipe entries by diet type.
+No UI rewrite is needed when switching from local files to cloud endpoints.
 
-This chart uses data from `data/top_protein.json`.
-
-### 3. Search and Filter
-Users can:
-- search by diet type, recipe name, or cuisine
-- filter recipes by selected diet type
-
-This makes the table easier to explore interactively.
-
-### 4. Pagination
-The top protein recipes are shown in a paginated table.
-Users can move between pages using the Previous and Next buttons.
-
-### 5. Data Source
-The current frontend uses local JSON data generated from the Phase 1 backend analysis:
-- `data/avg_macros.json`
-- `data/top_protein.json`
-
-## Integration with Cloud Backend
-This frontend is designed so that the local JSON fetch calls can later be replaced with Azure Function API endpoints. That means the interface can remain the same while the backend changes from local files to cloud-hosted services.
-
-## Summary
-This dashboard satisfies the Role B frontend requirements by providing:
-- dashboard UI controls
-- 2 working charts
-- interactive filtering and search
-- pagination for recipe records
-- documentation for the frontend implementation
+## Notes for Submission
+This frontend already covers the Role B implementation scope and is ready to be deployed as static files (for example, Azure Static Web App).
 
