@@ -1,8 +1,8 @@
     /* -----------------------------------------------------------
        1) CONFIG - switch this once Role A gives us the real URL
     ----------------------------------------------------------- */
-    const USE_MOCK_DATA = true; // set to false when the real Azure Function endpoint is ready
-    const REAL_API_BASE_URL = "https://REPLACE_WITH_ROLE_A_FUNCTION_URL/api"; // e.g. https://diet-analysis-func.azurewebsites.net/api
+    const USE_MOCK_DATA = false; // set to false when the real Azure Function endpoint is ready
+    const REAL_API_BASE_URL = "https://dietanalysis-fy2026-e4fwhad5c5cqgshm.canadacentral-01.azurewebsites.net/api"; // e.g. https://diet-analysis-func.azurewebsites.net/api
 
     /* -----------------------------------------------------------
        2) AGREED RESPONSE CONTRACT (shared with Role A)
