@@ -1,10 +1,9 @@
 const CONFIG = {
   csvPath: './data/All_Diets.csv',
   azure: {
-    avg: '',
-    topProtein: ''
+    insights: 'https://dietanalysis-fy2026-e4fwhad5c5cqgshm.canadacentral-01.azurewebsites.net/api/insights'
   },
-  useAzure: false   // set true and fill azure URLs to switch to Azure Function
+  useAzure: true
 };
 
 let avgMacrosData = [];
@@ -85,15 +84,23 @@ async function loadData() {
   metaInfo.textContent = 'Loading data from CSV...';
 
   try {
-    if (CONFIG.useAzure && CONFIG.azure.avg && CONFIG.azure.topProtein) {
+    if (CONFIG.useAzure && CONFIG.azure.insights) {
       // ── Azure Function mode ──
-      const [avgRes, proteinRes] = await Promise.all([
-        fetch(CONFIG.azure.avg),
-        fetch(CONFIG.azure.topProtein)
-      ]);
-      if (!avgRes.ok || !proteinRes.ok) throw new Error('Azure endpoint error');
-      avgMacrosData  = await avgRes.json();
-      topProteinData = await proteinRes.json();
+      const res = await fetch(CONFIG.azure.insights);
+      if (!res.ok) throw new Error('Azure endpoint error');
+      const result = await res.json();
+
+      const rows = result.data.map(r => ({
+        Diet_type: r.dietType,
+        Recipe_name: r.recipeName,
+        Cuisine_type: r.cuisineType,
+        'Protein(g)': r.protein,
+        'Carbs(g)': r.carbs,
+        'Fat(g)': r.fat
+      })).map(normalizeRow);
+
+      avgMacrosData  = computeAvgMacros(rows);
+      topProteinData = rows;
       finishLoad(startTime, 'AZURE FUNCTION');
     } else {
       // ── CSV mode ──
@@ -147,8 +154,8 @@ function finishLoad(startTime, sourceLabel) {
 function renderAllVisuals() {
   renderBarChart(avgMacrosData);
   renderPieChart(topProteinData);
-  renderScatterChart(avgMacrosData);   // filteredRecipes = topProteinData at this point
-  renderHeatmap(avgMacrosData);
+  renderScatterChart(filteredRecipes);
+  renderHeatmap(filteredRecipes);
 }
 
 function populateDietFilter() {
@@ -240,96 +247,94 @@ const DIET_COLORS = {
   'Vegan':         'rgba(139, 92, 246, 0.75)'
 };
 
-function renderScatterChart(filteredAvg) {
+// Real dataset has ~1,000+ recipes per diet type - plotting all of them at
+// once turns the scatter plot into a solid blob. Take an evenly-spaced
+// sample per diet type so shape/spread is still representative but the
+// canvas stays readable.
+function sampleByDiet(rows, maxPerDiet) {
+  const groups = {};
+  rows.forEach(r => {
+    if (!groups[r.Diet_type]) groups[r.Diet_type] = [];
+    groups[r.Diet_type].push(r);
+  });
+  const sampled = [];
+  Object.values(groups).forEach(group => {
+    if (group.length <= maxPerDiet) { sampled.push(...group); return; }
+    const step = group.length / maxPerDiet;
+    for (let i = 0; i < maxPerDiet; i++) sampled.push(group[Math.floor(i * step)]);
+  });
+  return sampled;
+}
+
+function renderScatterChart(rows) {
   const ctx = document.getElementById('scatterPlot').getContext('2d');
   if (scatterChartInstance) scatterChartInstance.destroy();
-
-  if (!filteredAvg.length) {
-    ctx.canvas.style.display = 'none';
-    return;
-  }
+  if (!rows.length) { ctx.canvas.style.display = 'none'; return; }
   ctx.canvas.style.display = '';
 
-  // Build a lookup: Diet_type → avg carbs/fat
-  const avgLookup = {};
-  filteredAvg.forEach(item => { avgLookup[item.Diet_type] = item; });
-
-  // Use filteredRecipes so scatter reflects current search/filter
-  // Group points by diet type for colored datasets
-  const datasetMap = {};
-  filteredRecipes.forEach(recipe => {
-    const avg = avgLookup[recipe.Diet_type];
-    if (!avg) return;                       // diet not in filtered avg → skip
-    if (!datasetMap[recipe.Diet_type]) {
-      datasetMap[recipe.Diet_type] = {
-        label: recipe.Diet_type,
-        data: [],
-        backgroundColor: DIET_COLORS[recipe.Diet_type] || 'rgba(156,163,175,0.7)',
-        pointRadius: 5
-      };
-    }
-    datasetMap[recipe.Diet_type].data.push({
-      x: avg['Carbs(g)'],        // avg carbs for this diet type
-      y: recipe['Protein(g)'],   // actual protein of this recipe
-      name: recipe.Recipe_name
-    });
-  });
-
-  const datasets = Object.values(datasetMap);
-  if (!datasets.length) {
-    ctx.canvas.style.display = 'none';
-    return;
-  }
+  const plotRows = sampleByDiet(rows, 8);
+  const dietTypes = [...new Set(plotRows.map(r => r.Diet_type))];
+  const datasets = dietTypes.map(diet => ({
+    label: diet,
+    data: plotRows.filter(r => r.Diet_type === diet)
+              .map(r => ({ x: r['Carbs(g)'], y: r['Protein(g)'] })),
+    backgroundColor: DIET_COLORS[diet] || 'rgba(156,163,175,0.7)',
+    pointRadius: 5
+  }));
 
   scatterChartInstance = new Chart(ctx, {
     type: 'scatter',
     data: { datasets },
     options: {
       responsive: true,
-      parsing: false,
-      plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12 } },
-        tooltip: {
-          callbacks: {
-            label(context) {
-              const p = context.raw;
-              return `${p.name}: Protein ${p.y.toFixed(1)}g, Avg Carbs ${p.x.toFixed(1)}g`;
-            }
-          }
-        }
-      },
       scales: {
-        x: { title: { display: true, text: 'Avg Carbs by Diet Type (g)' } },
-        y: { title: { display: true, text: 'Protein (g)' }, beginAtZero: true }
-      }
+        x: { title: { display: true, text: 'Carbs (g)' }, max: 150 },
+        y: { title: { display: true, text: 'Protein (g)' }, max: 150 }
+      },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
     }
   });
 }
 
-function renderHeatmap(data) {
+function renderHeatmap(rows) {
   const container = document.getElementById('heatmap');
-  if (!data.length) {
+  if (!rows.length) {
     container.innerHTML = '<p class="text-gray-400 text-sm text-center mt-4">No data for current filter.</p>';
     return;
   }
-  const cols = ['Protein(g)', 'Carbs(g)', 'Fat(g)'];
-  const maxValues = {
-    'Protein(g)': Math.max(...data.map(d => d['Protein(g)'])),
-    'Carbs(g)': Math.max(...data.map(d => d['Carbs(g)'])),
-    'Fat(g)': Math.max(...data.map(d => d['Fat(g)']))
-  };
+  const fields = ['Protein(g)', 'Carbs(g)', 'Fat(g)'];
 
-  const header = `<tr><th class="border px-2 py-1">Diet</th>${cols.map(c => `<th class="border px-2 py-1">${c.replace('(g)', '')}</th>`).join('')}</tr>`;
-  const rows = data.map(item => {
-    const cells = cols.map(col => {
-      const ratio = item[col] / maxValues[col];
-      const alpha = Math.max(0.15, ratio);
-      return `<td class="border px-2 py-1 text-center" style="background: rgba(59,130,246,${alpha.toFixed(2)});">${item[col].toFixed(1)}</td>`;
-    }).join('');
-    return `<tr><td class="border px-2 py-1">${escapeHtml(item.Diet_type)}</td>${cells}</tr>`;
-  }).join('');
+  function pearson(a, b) {
+    const n = a.length;
+    const meanA = a.reduce((s, v) => s + v, 0) / n;
+    const meanB = b.reduce((s, v) => s + v, 0) / n;
+    let num = 0, denA = 0, denB = 0;
+    for (let i = 0; i < n; i++) {
+      num += (a[i] - meanA) * (b[i] - meanB);
+      denA += (a[i] - meanA) ** 2;
+      denB += (b[i] - meanB) ** 2;
+    }
+    const den = Math.sqrt(denA * denB);
+    return den === 0 ? 0 : num / den;
+  }
 
-  container.innerHTML = `<table class="text-xs w-full border-collapse">${header}${rows}</table>`;
+  const columns = fields.map(f => rows.map(r => r[f]));
+  const matrix = fields.map((_, i) => fields.map((_, j) => pearson(columns[i], columns[j])));
+
+  function color(v) {
+    return v >= 0
+      ? `rgb(${Math.round(255 - v * 155)}, ${Math.round(255 - v * 155)}, 255)`
+      : `rgb(255, ${Math.round(255 + v * 155)}, ${Math.round(255 + v * 155)})`;
+  }
+
+  let html = '<div style="display:grid;grid-template-columns:80px repeat(3,1fr);gap:2px;font-size:11px;"><div></div>';
+  fields.forEach(f => html += `<div class="text-center font-semibold">${f.replace('(g)','')}</div>`);
+  fields.forEach((rowField, i) => {
+    html += `<div class="font-semibold">${rowField.replace('(g)','')}</div>`;
+    matrix[i].forEach(v => html += `<div class="text-center p-2 rounded" style="background:${color(v)}">${v.toFixed(2)}</div>`);
+  });
+  html += '</div>';
+  container.innerHTML = html;
 }
 
 function applyFilters() {
@@ -348,7 +353,7 @@ function applyFilters() {
   // Find active diet types in filteredRecipes to update charts
   const activeDietTypes = new Set(filteredRecipes.map(item => item.Diet_type));
 
-  // Filter avgMacrosData to keep only active diet types
+  // Filter avgMacrosData to keep only active diet types (used by Bar Chart)
   const filteredAvg = avgMacrosData.filter(item => activeDietTypes.has(item.Diet_type));
 
   // Apply current sort to filtered recipes
@@ -371,8 +376,8 @@ function applyFilters() {
   // Sync update all charts
   if (filteredAvg.length > 0) {
     renderBarChart(filteredAvg);
-    renderScatterChart(filteredAvg);
-    renderHeatmap(filteredAvg);
+    renderScatterChart(filteredRecipes);
+    renderHeatmap(filteredRecipes);
   } else {
     renderBarChart([]);
     renderScatterChart([]);
@@ -484,8 +489,8 @@ function resetFilters() {
 
   // Re-render all charts with all data
   renderBarChart(avgMacrosData);
-  renderScatterChart(avgMacrosData);
-  renderHeatmap(avgMacrosData);
+  renderScatterChart(topProteinData);
+  renderHeatmap(topProteinData);
   renderPieChart(filteredRecipes);
   renderTable();
 }
@@ -629,39 +634,28 @@ function openModal(type) {
       });
 
     } else if (type === 'scatter') {
-      const filteredAvg = avgMacrosData.filter(item =>
-        new Set(filteredRecipes.map(r => r.Diet_type)).has(item.Diet_type)
-      );
-      const renderAvg = filteredAvg.length ? filteredAvg : avgMacrosData;
-      const renderRecipes = filteredRecipes.length ? filteredRecipes : topProteinData;
-      const avgLookup = {};
-      renderAvg.forEach(item => { avgLookup[item.Diet_type] = item; });
-      const datasetMap = {};
-      renderRecipes.forEach(recipe => {
-        const avg = avgLookup[recipe.Diet_type];
-        if (!avg) return;
-        if (!datasetMap[recipe.Diet_type]) {
-          datasetMap[recipe.Diet_type] = {
-            label: recipe.Diet_type,
-            data: [],
-            backgroundColor: DIET_COLORS[recipe.Diet_type] || 'rgba(156,163,175,0.7)',
-            pointRadius: 6
-          };
-        }
-        datasetMap[recipe.Diet_type].data.push({ x: avg['Carbs(g)'], y: recipe['Protein(g)'], name: recipe.Recipe_name });
-      });
+      const allRows = filteredRecipes.length ? filteredRecipes : topProteinData;
+      const renderRows = sampleByDiet(allRows, 40); // modal canvas is bigger, allow a few more points
+      const dietTypes = [...new Set(renderRows.map(r => r.Diet_type))];
+      const datasets = dietTypes.map(diet => ({
+        label: diet,
+        data: renderRows.filter(r => r.Diet_type === diet)
+                        .map(r => ({ x: r['Carbs(g)'], y: r['Protein(g)'], name: r.Recipe_name })),
+        backgroundColor: DIET_COLORS[diet] || 'rgba(156,163,175,0.7)',
+        pointRadius: 5
+      }));
       modalChartInstance = new Chart(ctx, {
         type: 'scatter',
-        data: { datasets: Object.values(datasetMap) },
+        data: { datasets },
         options: {
           responsive: true, parsing: false,
           plugins: {
             legend: { position: 'bottom' },
-            tooltip: { callbacks: { label(c) { return `${c.raw.name}: Protein ${c.raw.y.toFixed(1)}g, Avg Carbs ${c.raw.x.toFixed(1)}g`; } } }
+            tooltip: { callbacks: { label(c) { return `${c.raw.name}: Protein ${c.raw.y.toFixed(1)}g, Carbs ${c.raw.x.toFixed(1)}g`; } } }
           },
           scales: {
-            x: { title: { display: true, text: 'Avg Carbs by Diet Type (g)' } },
-            y: { title: { display: true, text: 'Protein (g)' }, beginAtZero: true }
+            x: { title: { display: true, text: 'Carbs (g)' }, max: 150 },
+            y: { title: { display: true, text: 'Protein (g)' }, max: 150 }
           }
         }
       });
