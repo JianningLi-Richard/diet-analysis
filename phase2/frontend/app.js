@@ -20,6 +20,49 @@ let barChartInstance = null;
 let pieChartInstance = null;
 let scatterChartInstance = null;
 
+// ── Auth (client-side demo gate; no backend auth service exists yet) ───────
+const AUTH_STORAGE_KEY = 'dietDashboardUser';
+
+function initAuth() {
+  const username = sessionStorage.getItem(AUTH_STORAGE_KEY);
+  if (username) {
+    showDashboard(username);
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('dashboardApp').classList.add('hidden');
+}
+
+function showDashboard(username) {
+  document.getElementById('userDisplayName').textContent = username;
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('dashboardApp').classList.remove('hidden');
+  loadData();
+}
+
+function handleLogin(event) {
+  event.preventDefault();
+  const username = document.getElementById('loginUsername').value.trim();
+  const errorEl = document.getElementById('loginError');
+  if (!username) {
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  errorEl.classList.add('hidden');
+  sessionStorage.setItem(AUTH_STORAGE_KEY, username);
+  showDashboard(username);
+}
+
+function handleLogout() {
+  sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  document.getElementById('loginForm').reset();
+  showLogin();
+}
+
 // ── CSV processing helpers ────────────────────────────────────────────────
 
 function normalizeRow(row) {
@@ -688,5 +731,7 @@ document.getElementById('nextBtn').addEventListener('click', nextPage);
 document.getElementById('prevBtn').addEventListener('click', prevPage);
 document.getElementById('sortBySelect').addEventListener('change', (e) => sortRecipes(e.target.value));
 document.getElementById('rowsPerPageSelect').addEventListener('change', (e) => setRowsPerPage(e.target.value));
+document.getElementById('loginForm').addEventListener('submit', handleLogin);
+document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 
-window.addEventListener('DOMContentLoaded', loadData);
+window.addEventListener('DOMContentLoaded', initAuth);

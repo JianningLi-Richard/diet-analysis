@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,163 +9,218 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    .chart-card { cursor: pointer; transition: box-shadow 0.15s, transform 0.15s; }
-    .chart-card:hover { box-shadow: 0 8px 24px rgba(59,130,246,0.25); transform: translateY(-2px); }
-    .chart-card:hover .expand-hint { opacity: 1; }
-    .expand-hint { opacity: 0; transition: opacity 0.15s; }
-    #chartModal { display: none; }
-    #chartModal.open { display: flex; }
+    .chart-card {
+      cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+
+    .chart-card:hover {
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
+      transform: translateY(-2px);
+    }
+
+    .chart-card:hover .expand-hint {
+      opacity: 1;
+    }
+
+    .expand-hint {
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    #chartModal {
+      display: none;
+    }
+
+    #chartModal.open {
+      display: flex;
+    }
   </style>
 </head>
+
 <body class="bg-gray-100 min-h-screen">
 
-  <header class="bg-blue-600 text-white p-5 shadow">
-    <div class="container mx-auto">
-      <h1 class="text-3xl font-bold">Nutritional Insights Dashboard</h1>
-      <p class="text-sm mt-1">Phase 2 - Frontend Dashboard for Diet Analysis</p>
-    </div>
-  </header>
-
-  <main class="container mx-auto p-6">
-    <section class="mb-8">
-      <h2 class="text-2xl font-semibold mb-4">Explore Nutritional Insights</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="chart-card bg-white p-4 shadow-lg rounded-lg relative" onclick="openModal('bar')">
-          <div class="expand-hint absolute top-2 right-2 text-blue-400 text-xs">⛶ expand</div>
-          <h3 class="font-semibold">Bar Chart</h3>
-          <p class="text-sm text-gray-600">Average macronutrient content by diet type.</p>
-          <canvas id="barChart" class="w-full h-48"></canvas>
-        </div>
-
-        <div class="chart-card bg-white p-4 shadow-lg rounded-lg relative" onclick="openModal('scatter')">
-          <div class="expand-hint absolute top-2 right-2 text-blue-400 text-xs">⛶ expand</div>
-          <h3 class="font-semibold">Scatter Plot</h3>
-          <p class="text-sm text-gray-600">Protein vs carbs across diet types.</p>
-          <canvas id="scatterPlot" class="w-full h-48"></canvas>
-        </div>
-
-        <div class="chart-card bg-white p-4 shadow-lg rounded-lg relative" onclick="openModal('heatmap')">
-          <div class="expand-hint absolute top-2 right-2 text-blue-400 text-xs">⛶ expand</div>
-          <h3 class="font-semibold">Heatmap</h3>
-          <p class="text-sm text-gray-600">Relative macro intensity by diet type.</p>
-          <div id="heatmap" class="w-full h-48 overflow-auto"></div>
-        </div>
-
-        <div class="chart-card bg-white p-4 shadow-lg rounded-lg relative" onclick="openModal('pie')">
-          <div class="expand-hint absolute top-2 right-2 text-blue-400 text-xs">⛶ expand</div>
-          <h3 class="font-semibold">Pie Chart</h3>
-          <p class="text-sm text-gray-600">Recipe distribution by diet type.</p>
-          <canvas id="pieChart" class="w-full h-48"></canvas>
-        </div>
-      </div>
-    </section>
-
-    <section class="mb-8 bg-white rounded-lg shadow p-5">
-      <h2 class="text-2xl font-semibold mb-4">Filters and Data Interaction</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label class="block">
-          <span class="sr-only">Search recipes</span>
-          <input
-            id="searchInput"
-            type="text"
-            placeholder="Search by Diet Type / Recipe / Cuisine"
-            class="p-2 border rounded w-full"
-          />
-        </label>
-
-        <label class="block">
-          <span class="sr-only">Filter by diet type</span>
-          <select id="dietFilter" class="p-2 border rounded w-full">
-            <option value="all">All Diet Types</option>
-          </select>
-        </label>
-      </div>
-    </section>
-
-    <section class="mb-8 bg-white rounded-lg shadow p-5">
-      <h2 class="text-2xl font-semibold mb-4">API Data Interaction</h2>
-      <div class="flex flex-wrap gap-4">
-        <button id="loadInsightsBtn" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Get Nutritional Insights</button>
-        <button id="loadRecipesBtn" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">Get Recipes</button>
-        <button id="loadClustersBtn" class="bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">Get Clusters</button>
-        <button id="resetBtn" class="bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700">Reset Filters</button>
-      </div>
-
-      <div class="mt-4 text-sm text-gray-600">
-        <span id="metaInfo">Execution metadata: local demo mode</span>
-      </div>
-      <div id="clusterOutput" class="mt-2 text-sm text-gray-700"></div>
-    </section>
-
-    <section class="bg-white rounded-lg shadow p-5 mb-8">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-semibold">Recipes</h2>
-        <div class="flex gap-4 items-center">
-          <div class="flex gap-2 items-center">
-            <label for="sortBySelect" class="text-sm text-gray-700">Sort by:</label>
-            <select id="sortBySelect" class="p-1 border rounded text-sm">
-              <option value="Protein(g)-desc">Protein (High to Low)</option>
-              <option value="Protein(g)-asc">Protein (Low to High)</option>
-              <option value="Diet_type-asc">Diet Type (A-Z)</option>
-              <option value="Recipe_name-asc">Recipe Name (A-Z)</option>
-              <option value="Cuisine_type-asc">Cuisine Type (A-Z)</option>
-            </select>
-          </div>
-          <div class="flex gap-2 items-center">
-            <label for="rowsPerPageSelect" class="text-sm text-gray-700">Rows per page:</label>
-            <select id="rowsPerPageSelect" class="p-1 border rounded text-sm">
-              <option value="5">5</option>
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="min-w-full border border-gray-200">
-          <thead class="bg-gray-100">
-            <tr>
-              <th class="border px-4 py-2 text-left">Diet Type</th>
-              <th class="border px-4 py-2 text-left">Recipe Name</th>
-              <th class="border px-4 py-2 text-left">Cuisine Type</th>
-              <th class="border px-4 py-2 text-left">Protein (g)</th>
-            </tr>
-          </thead>
-          <tbody id="recipeTableBody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section>
-      <h2 class="text-2xl font-semibold mb-4">Pagination</h2>
-      <div class="flex justify-center items-center gap-3 mt-4">
-        <button id="prevBtn" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Previous</button>
-        <span id="pageInfo" class="text-sm font-medium text-gray-700">Page 1</span>
-        <button id="nextBtn" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Next</button>
-      </div>
-    </section>
-  </main>
-
-  <!-- Chart Modal -->
-  <div id="chartModal" class="fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-60" onclick="closeModal(event)">
-    <div class="bg-white rounded-2xl shadow-2xl p-6 w-11/12 max-w-4xl max-h-screen overflow-auto relative" onclick="event.stopPropagation()">
-      <div class="flex justify-between items-center mb-4">
-        <h2 id="modalTitle" class="text-xl font-bold text-gray-800"></h2>
-        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-700 text-2xl font-bold leading-none">&times;</button>
-      </div>
-      <div id="modalBody" class="w-full">
-        <canvas id="modalCanvas"></canvas>
-        <div id="modalHeatmap"></div>
-      </div>
-      <p class="text-xs text-gray-400 mt-4 text-right">Click outside or × to close</p>
-    </div>
+  <!-- Login Screen -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-100">
+    <form id="loginForm" class="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm">
+      <h1 class="text-2xl font-bold text-gray-800 mb-1">Nutritional Insights Dashboard</h1>
+      <p class="text-sm text-gray-500 mb-6">Please sign in to view the dashboard.</p>
+      <label class="block mb-4">
+        <span class="text-base font-medium text-gray-700">Username</span>
+        <input id="loginUsername" type="text" required autocomplete="username" class="mt-1 p-2 border rounded w-full"
+          placeholder="Enter your name" />
+      </label>
+      <label class="block mb-6">
+        <span class="text-sm font-medium text-gray-700">Password</span>
+        <input id="loginPassword" type="password" autocomplete="current-password" class="mt-1 p-2 border rounded w-full"
+          placeholder="(demo only, not checked)" />
+      </label>
+      <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Login</button>
+      <p id="loginError" class="text-red-500 text-sm mt-3 hidden">Please enter a username.</p>
+    </form>
   </div>
 
-  <footer class="bg-blue-600 text-white text-center p-4 mt-8">
-    <p>&copy; 2026 Nutritional Insights Dashboard</p>
-  </footer>
+  <!-- Dashboard (hidden until login) -->
+  <div id="dashboardApp" class="hidden">
+
+    <header class="bg-blue-600 text-white p-5 shadow">
+      <div class="container mx-auto flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold">Nutritional Insights Dashboard</h1>
+        </div>
+        <div class="flex items-center gap-4">
+          <span id="userDisplayName" class="text-white font-medium text-lg"></span>
+          <button id="logoutBtn" class="bg-blue-800 hover:bg-blue-900 text-white text-sm py-1.5 px-3 rounded">Logout</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto p-6">
+      <section class="mb-8">
+        <h2 class="text-2xl font-semibold mb-4">Explore Nutritional Insights</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="chart-card bg-white p-4 shadow-lg rounded-lg relative" onclick="openModal('bar')">
+            <div class="expand-hint absolute top-2 right-2 text-blue-400 text-xs">⛶ expand</div>
+            <h3 class="font-semibold">Bar Chart</h3>
+            <p class="text-sm text-gray-600">Average macronutrient content by diet type.</p>
+            <canvas id="barChart" class="w-full h-48"></canvas>
+          </div>
+
+          <div class="chart-card bg-white p-4 shadow-lg rounded-lg relative" onclick="openModal('scatter')">
+            <div class="expand-hint absolute top-2 right-2 text-blue-400 text-xs">⛶ expand</div>
+            <h3 class="font-semibold">Scatter Plot</h3>
+            <p class="text-sm text-gray-600">Protein vs carbs across diet types.</p>
+            <canvas id="scatterPlot" class="w-full h-48"></canvas>
+          </div>
+
+          <div class="chart-card bg-white p-4 shadow-lg rounded-lg relative" onclick="openModal('heatmap')">
+            <div class="expand-hint absolute top-2 right-2 text-blue-400 text-xs">⛶ expand</div>
+            <h3 class="font-semibold">Heatmap</h3>
+            <p class="text-sm text-gray-600">Relative macro intensity by diet type.</p>
+            <div id="heatmap" class="w-full h-48 overflow-auto"></div>
+          </div>
+
+          <div class="chart-card bg-white p-4 shadow-lg rounded-lg relative" onclick="openModal('pie')">
+            <div class="expand-hint absolute top-2 right-2 text-blue-400 text-xs">⛶ expand</div>
+            <h3 class="font-semibold">Pie Chart</h3>
+            <p class="text-sm text-gray-600">Recipe distribution by diet type.</p>
+            <canvas id="pieChart" class="w-full h-48"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-8 bg-white rounded-lg shadow p-5">
+        <h2 class="text-2xl font-semibold mb-4">Filters and Data Interaction</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="block">
+            <span class="sr-only">Search recipes</span>
+            <input id="searchInput" type="text" placeholder="Search by Diet Type / Recipe / Cuisine"
+              class="p-2 border rounded w-full" />
+          </label>
+
+          <label class="block">
+            <span class="sr-only">Filter by diet type</span>
+            <select id="dietFilter" class="p-2 border rounded w-full">
+              <option value="all">All Diet Types</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="mb-8 bg-white rounded-lg shadow p-5">
+        <h2 class="text-2xl font-semibold mb-4">API Data Interaction</h2>
+        <div class="flex flex-wrap gap-4">
+          <button id="loadInsightsBtn" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Get
+            Nutritional Insights</button>
+          <button id="loadRecipesBtn" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">Get
+            Recipes</button>
+          <button id="loadClustersBtn" class="bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">Get
+            Clusters</button>
+          <button id="resetBtn" class="bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700">Reset
+            Filters</button>
+        </div>
+
+        <div class="mt-4 text-sm text-gray-600">
+          <span id="metaInfo">Execution metadata: local demo mode</span>
+        </div>
+        <div id="clusterOutput" class="mt-2 text-sm text-gray-700"></div>
+      </section>
+
+      <section class="bg-white rounded-lg shadow p-5 mb-8">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-semibold">Recipes</h2>
+          <div class="flex gap-4 items-center">
+            <div class="flex gap-2 items-center">
+              <label for="sortBySelect" class="text-sm text-gray-700">Sort by:</label>
+              <select id="sortBySelect" class="p-1 border rounded text-sm">
+                <option value="Protein(g)-desc">Protein (High to Low)</option>
+                <option value="Protein(g)-asc">Protein (Low to High)</option>
+                <option value="Diet_type-asc">Diet Type (A-Z)</option>
+                <option value="Recipe_name-asc">Recipe Name (A-Z)</option>
+                <option value="Cuisine_type-asc">Cuisine Type (A-Z)</option>
+              </select>
+            </div>
+            <div class="flex gap-2 items-center">
+              <label for="rowsPerPageSelect" class="text-sm text-gray-700">Rows per page:</label>
+              <select id="rowsPerPageSelect" class="p-1 border rounded text-sm">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full border border-gray-200">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="border px-4 py-2 text-left">Diet Type</th>
+                <th class="border px-4 py-2 text-left">Recipe Name</th>
+                <th class="border px-4 py-2 text-left">Cuisine Type</th>
+                <th class="border px-4 py-2 text-left">Protein (g)</th>
+              </tr>
+            </thead>
+            <tbody id="recipeTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-2xl font-semibold mb-4">Pagination</h2>
+        <div class="flex justify-center items-center gap-3 mt-4">
+          <button id="prevBtn" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Previous</button>
+          <span id="pageInfo" class="text-sm font-medium text-gray-700">Page 1</span>
+          <button id="nextBtn" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Next</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Chart Modal -->
+    <div id="chartModal" class="fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-60"
+      onclick="closeModal(event)">
+      <div class="bg-white rounded-2xl shadow-2xl p-6 w-11/12 max-w-4xl max-h-screen overflow-auto relative"
+        onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="modalTitle" class="text-xl font-bold text-gray-800"></h2>
+          <button onclick="closeModal()"
+            class="text-gray-400 hover:text-gray-700 text-2xl font-bold leading-none">&times;</button>
+        </div>
+        <div id="modalBody" class="w-full">
+          <canvas id="modalCanvas"></canvas>
+          <div id="modalHeatmap"></div>
+        </div>
+        <p class="text-xs text-gray-400 mt-4 text-right">Click outside or × to close</p>
+      </div>
+    </div>
+
+    <footer class="bg-blue-600 text-white text-center p-4 mt-8">
+      <p>&copy; 2026 Nutritional Insights Dashboard</p>
+    </footer>
+
+  </div>
 
   <script src="app.js"></script>
 </body>
+
 </html>
