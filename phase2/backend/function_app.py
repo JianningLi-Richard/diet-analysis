@@ -14,6 +14,12 @@ from azure.storage.blob import BlobServiceClient
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
+# Person 3 - Data Security & Authentication routes (/api/auth/*).
+# Registered as a blueprint so this file doesn't have to change beyond
+# these two lines - see auth/blueprint.py for the actual routes.
+from auth.blueprint import bp as auth_bp  # noqa: E402
+app.register_functions(auth_bp)
+
 NUMERIC_COLS = ["Protein(g)", "Carbs(g)", "Fat(g)"]
 
 RAW_BLOB_NAME = os.environ.get("DIET_DATA_BLOB", "All_Diets.csv")

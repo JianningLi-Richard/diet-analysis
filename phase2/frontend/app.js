@@ -1,7 +1,11 @@
 const CONFIG = {
   csvPath: './data/All_Diets.csv',
   azure: {
+    apiBase: https://dietanalysis-fy2026-e4fwhad5c5cqgshm.canadacentral-01.azurewebsites.net/api
+    //apiBase: 'http://localhost:7071/api',
     insights: 'https://dietanalysis-fy2026-e4fwhad5c5cqgshm.canadacentral-01.azurewebsites.net/api/insights'
+
+    //insights: 'http://localhost:7071/api/insights' 
   },
   useAzure: true
 };
@@ -20,14 +24,36 @@ let barChartInstance = null;
 let pieChartInstance = null;
 let scatterChartInstance = null;
 
-// ── Auth (client-side demo gate; no backend auth service exists yet) ───────
-const AUTH_STORAGE_KEY = 'dietDashboardUser';
+// ── Auth (real backend: email/password + Google OAuth, JWT-based) ─────────
+// Talks to Person 3's /api/auth/* endpoints registered in function_app.py.
+const TOKEN_STORAGE_KEY = 'dietDashboardToken';
+let authMode = 'login'; // 'login' | 'register'
 
-function initAuth() {
-  const username = sessionStorage.getItem(AUTH_STORAGE_KEY);
-  if (username) {
-    showDashboard(username);
-  } else {
+async function initAuth() {
+  // Coming back from Google's OAuth redirect? The callback appends ?token=...
+  const params = new URLSearchParams(window.location.search);
+  const tokenFromRedirect = params.get('token');
+  if (tokenFromRedirect) {
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, tokenFromRedirect);
+    // Clean the token out of the visible URL
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
+  const token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  if (!token) {
+    showLogin();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${CONFIG.azure.apiBase}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Session expired');
+    const user = await res.json();
+    showDashboard(user.full_name);
+  } catch (err) {
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
     showLogin();
   }
 }
@@ -37,28 +63,81 @@ function showLogin() {
   document.getElementById('dashboardApp').classList.add('hidden');
 }
 
-function showDashboard(username) {
-  document.getElementById('userDisplayName').textContent = username;
+function showDashboard(fullName) {
+  document.getElementById('userDisplayName').textContent = fullName;
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('dashboardApp').classList.remove('hidden');
   loadData();
 }
 
-function handleLogin(event) {
-  event.preventDefault();
-  const username = document.getElementById('loginUsername').value.trim();
-  const errorEl = document.getElementById('loginError');
-  if (!username) {
-    errorEl.classList.remove('hidden');
-    return;
-  }
-  errorEl.classList.add('hidden');
-  sessionStorage.setItem(AUTH_STORAGE_KEY, username);
-  showDashboard(username);
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  const isRegister = authMode === 'register';
+
+  document.getElementById('fullNameField').classList.toggle('hidden', !isRegister);
+  document.getElementById('loginFullName').required = isRegister;
+  document.getElementById('authSubmitBtn').textContent = isRegister ? 'Sign up' : 'Login';
+  document.getElementById('authToggleText').textContent = isRegister
+    ? 'Already have an account?'
+    : "Don't have an account?";
+  document.getElementById('authToggleBtn').textContent = isRegister ? 'Log in' : 'Sign up';
+  document.getElementById('loginError').classList.add('hidden');
 }
 
-function handleLogout() {
-  sessionStorage.removeItem(AUTH_STORAGE_KEY);
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const errorEl = document.getElementById('loginError');
+  errorEl.classList.add('hidden');
+
+  const email = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const fullName = document.getElementById('loginFullName').value.trim();
+
+  const isRegister = authMode === 'register';
+  const endpoint = isRegister ? 'register' : 'login';
+  const payload = isRegister ? { email, password, full_name: fullName } : { email, password };
+
+  try {
+    const res = await fetch(`${CONFIG.azure.apiBase}/auth/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Something went wrong. Please try again.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
+    document.getElementById('loginForm').reset();
+    await initAuth(); // fetches /auth/me and shows the dashboard with the real name
+  } catch (err) {
+    errorEl.textContent = 'Could not reach the auth service. Is the API running?';
+    errorEl.classList.remove('hidden');
+  }
+}
+
+function handleGoogleLogin() {
+  window.location.href = `${CONFIG.azure.apiBase}/auth/google/login`;
+}
+
+async function handleLogout() {
+  const token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  if (token) {
+    try {
+      await fetch(`${CONFIG.azure.apiBase}/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (err) {
+      // Logout is best-effort server-side (JWTs are stateless anyway) -
+      // clearing the local token below is what actually logs the user out.
+    }
+  }
+  sessionStorage.removeItem(TOKEN_STORAGE_KEY);
   document.getElementById('loginForm').reset();
   showLogin();
 }
@@ -731,7 +810,9 @@ document.getElementById('nextBtn').addEventListener('click', nextPage);
 document.getElementById('prevBtn').addEventListener('click', prevPage);
 document.getElementById('sortBySelect').addEventListener('change', (e) => sortRecipes(e.target.value));
 document.getElementById('rowsPerPageSelect').addEventListener('change', (e) => setRowsPerPage(e.target.value));
-document.getElementById('loginForm').addEventListener('submit', handleLogin);
+document.getElementById('loginForm').addEventListener('submit', handleAuthSubmit);
+document.getElementById('authToggleBtn').addEventListener('click', toggleAuthMode);
+document.getElementById('googleLoginBtn').addEventListener('click', handleGoogleLogin);
 document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 
 window.addEventListener('DOMContentLoaded', initAuth);

@@ -44,19 +44,43 @@
   <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gray-100">
     <form id="loginForm" class="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm">
       <h1 class="text-2xl font-bold text-gray-800 mb-1">Nutritional Insights Dashboard</h1>
-      <p class="text-sm text-gray-500 mb-6">Please sign in to view the dashboard.</p>
+      <p id="authSubtitle" class="text-sm text-gray-500 mb-6">Sign in to view the dashboard.</p>
+
+      <label id="fullNameField" class="block mb-4 hidden">
+        <span class="text-base font-medium text-gray-700">Full name</span>
+        <input id="loginFullName" type="text" autocomplete="name" class="mt-1 p-2 border rounded w-full"
+          placeholder="Kate C." />
+      </label>
+
       <label class="block mb-4">
-        <span class="text-base font-medium text-gray-700">Username</span>
-        <input id="loginUsername" type="text" required autocomplete="username" class="mt-1 p-2 border rounded w-full"
-          placeholder="Enter your name" />
+        <span class="text-base font-medium text-gray-700">Email</span>
+        <input id="loginUsername" type="email" required autocomplete="username" class="mt-1 p-2 border rounded w-full"
+          placeholder="you@sait.ca" />
       </label>
       <label class="block mb-6">
         <span class="text-sm font-medium text-gray-700">Password</span>
-        <input id="loginPassword" type="password" autocomplete="current-password" class="mt-1 p-2 border rounded w-full"
-          placeholder="(demo only, not checked)" />
+        <input id="loginPassword" type="password" required autocomplete="current-password"
+          class="mt-1 p-2 border rounded w-full" placeholder="At least 8 characters" />
       </label>
-      <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Login</button>
-      <p id="loginError" class="text-red-500 text-sm mt-3 hidden">Please enter a username.</p>
+
+      <button id="authSubmitBtn" type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Login</button>
+      <p id="loginError" class="text-red-500 text-sm mt-3 hidden"></p>
+
+      <p class="text-sm text-gray-500 mt-4 text-center">
+        <span id="authToggleText">Don't have an account?</span>
+        <button id="authToggleBtn" type="button" class="text-blue-600 hover:underline">Sign up</button>
+      </p>
+
+      <div class="flex items-center gap-3 my-4">
+        <div class="flex-1 border-t"></div>
+        <span class="text-xs text-gray-400">OR</span>
+        <div class="flex-1 border-t"></div>
+      </div>
+
+      <button id="googleLoginBtn" type="button"
+        class="w-full border border-gray-300 py-2 px-4 rounded flex items-center justify-center gap-2 hover:bg-gray-50">
+        Sign in with Google
+      </button>
     </form>
   </div>
 

@@ -2,3 +2,10 @@ azure-functions
 azure-storage-blob
 azure-cosmos
 pandas
+
+# Person 3 - Data Security & Authentication
+passlib==1.7.4
+bcrypt==4.0.1
+python-jose[cryptography]==3.3.0
+cryptography==43.0.1
+requests==2.32.3
