@@ -1,11 +1,11 @@
 const CONFIG = {
   csvPath: './data/All_Diets.csv',
   azure: {
-    apiBase: https://dietanalysis-fy2026-e4fwhad5c5cqgshm.canadacentral-01.azurewebsites.net/api
+    apiBase: 'https://dietanalysis-fy2026-e4fwhad5c5cqgshm.canadacentral-01.azurewebsites.net/api',
     //apiBase: 'http://localhost:7071/api',
     insights: 'https://dietanalysis-fy2026-e4fwhad5c5cqgshm.canadacentral-01.azurewebsites.net/api/insights'
 
-    //insights: 'http://localhost:7071/api/insights' 
+    //insights: 'http://localhost:7071/api/insights'
   },
   useAzure: true
 };
